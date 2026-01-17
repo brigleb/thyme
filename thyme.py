@@ -120,7 +120,8 @@ def text_to_mp3(text, output_path):
             "-v", VOICE,
             "-r", str(RATE),
             "-f", temp_path,
-            "--file-format=mp3",
+            "--file-format=m4af",
+            "--data-format=aac",
             "-o", str(output_path),
         ], check=True)
     finally:
@@ -129,7 +130,7 @@ def text_to_mp3(text, output_path):
 
 def cleanup_old_episodes():
     """Delete episodes beyond MAX_EPISODES limit."""
-    mp3_files = sorted(OUTPUT_DIR.glob("*.mp3"), reverse=True)
+    mp3_files = sorted(OUTPUT_DIR.glob("*.m4a"), reverse=True)
     
     for old_file in mp3_files[MAX_EPISODES:]:
         print(f"Removing old episode: {old_file.name}")
@@ -173,7 +174,7 @@ def main():
         # Generate filename with timestamp
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         safe_title = sanitize_filename(title)
-        filename = f"{timestamp}-{safe_title}.mp3"
+        filename = f"{timestamp}-{safe_title}.m4a"
         output_path = OUTPUT_DIR / filename
         
         # Convert to audio
