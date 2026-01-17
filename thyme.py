@@ -19,7 +19,8 @@ import trafilatura
 OUTPUT_DIR = Path("~/Library/Mobile Documents/com~apple~CloudDocs/Thyme/").expanduser()
 BOOKMARKS_PATH = Path("~/Library/Safari/Bookmarks.plist").expanduser()
 STATE_FILE = OUTPUT_DIR / "processed.json"
-MAX_EPISODES = 20
+MAX_EPISODES = 40
+MIN_TEXT_LENGTH = 500  # Skip articles shorter than this
 VOICE = "Samantha"
 RATE = 190
 
@@ -165,6 +166,11 @@ def main():
         if not text:
             print(f"  Failed to extract text, skipping")
             processed_urls.add(url)  # Mark as processed to avoid retrying
+            continue
+
+        if len(text) < MIN_TEXT_LENGTH:
+            print(f"  Too short ({len(text)} chars), skipping")
+            processed_urls.add(url)
             continue
         
         # Prepare text with spoken intro
