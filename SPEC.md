@@ -43,7 +43,7 @@ A command-line Python script that converts Safari Reading List articles into MP3
 │     → Fetch page                        │
 │     → Extract article text (trafilatura)│
 │     → Prepend title + source            │
-│     → say --file-format=mp3 -o file.mp3 │
+│     → say -o file.m4a (AAC format)      │
 │                                         │
 │  3. Delete oldest files beyond 20       │
 └─────────────────────────────────────────┘
@@ -79,7 +79,7 @@ Example intro: "From The Atlantic: The Future of Work. [article body]"
 ### 3.3 Text-to-Speech
 
 ```bash
-say -v "Samantha" -r 190 -f input.txt --file-format=mp3 -o output.mp3
+say -v "Samantha" -r 190 -f input.txt --file-format=m4af --data-format=aac -o output.m4a
 ```
 
 | Option | Purpose |
@@ -87,18 +87,19 @@ say -v "Samantha" -r 190 -f input.txt --file-format=mp3 -o output.mp3
 | `-v "Samantha"` | Voice selection |
 | `-r 190` | Speaking rate (words per minute) |
 | `-f input.txt` | Read from file (avoids shell escaping issues) |
-| `--file-format=mp3` | Direct MP3 output |
-| `-o output.mp3` | Output file path |
+| `--file-format=m4af` | Apple MPEG-4 Audio container |
+| `--data-format=aac` | AAC compression |
+| `-o output.m4a` | Output file path |
 
 ### 3.4 Output
 
 | Property | Value |
 |----------|-------|
 | Location | `~/Library/Mobile Documents/com~apple~CloudDocs/Thyme/` |
-| Filename format | `YYYYMMDD-HHMMSS-{sanitized-title}.mp3` |
+| Filename format | `YYYYMMDD-HHMMSS-{sanitized-title}.m4a` |
 | Timestamp source | Script processing time |
 
-Filename example: `20260115-143022-the-future-of-work.mp3`
+Filename example: `20260115-143022-the-future-of-work.m4a`
 
 ### 3.5 State Tracking
 
@@ -110,7 +111,7 @@ Filename example: `20260115-143022-the-future-of-work.mp3`
 
 ### 3.6 Cleanup
 
-- List all `.mp3` files in output folder
+- List all `.m4a` files in output folder
 - Sort by filename (timestamp prefix ensures chronological order)
 - Keep newest 20
 - Delete the rest
@@ -122,20 +123,21 @@ Filename example: `20260115-143022-the-future-of-work.mp3`
 ### Python Packages
 
 ```
-trafilatura    # Article extraction
+trafilatura       # Article extraction
+lxml_html_clean   # Required by trafilatura for HTML processing
 ```
 
 ### macOS Built-ins
 
 ```
-say            # Text-to-speech with MP3 output
+say            # Text-to-speech (outputs m4a/AAC)
 plistlib       # Standard library, for reading Safari bookmarks
 ```
 
 ### Installation
 
 ```bash
-pip install trafilatura
+pip install trafilatura lxml_html_clean
 ```
 
 ---
@@ -176,7 +178,7 @@ Create `~/Library/LaunchAgents/com.needmore.thyme.plist`:
     <key>ProgramArguments</key>
     <array>
         <string>/usr/bin/python3</string>
-        <string>/Users/USERNAME/Developer/thyme/thyme.py</string>
+        <string>/Users/USERNAME/path/to/thyme.py</string>
     </array>
     <key>WatchPaths</key>
     <array>

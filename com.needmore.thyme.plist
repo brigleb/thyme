@@ -8,11 +8,11 @@
     <key>ProgramArguments</key>
     <array>
         <string>/usr/bin/python3</string>
-        <string>/Users/ray/bin/thyme/thyme.py</string>
+        <string>/Users/USERNAME/path/to/thyme.py</string>
     </array>
     <key>WatchPaths</key>
     <array>
-        <string>/Users/ray/Library/Safari/Bookmarks.plist</string>
+        <string>/Users/USERNAME/Library/Safari/Bookmarks.plist</string>
     </array>
     <key>StandardOutPath</key>
     <string>/tmp/thyme.log</string>

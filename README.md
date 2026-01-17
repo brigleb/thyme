@@ -5,20 +5,20 @@ Convert Safari Reading List articles to audio files.
 ## Quick Start
 
 ```bash
-# Install dependency
-pip install trafilatura
+# Install dependencies
+pip install trafilatura lxml_html_clean
 
 # Run manually
 python thyme.py
 ```
 
-MP3s appear in `~/Library/Mobile Documents/com~apple~CloudDocs/Thyme/` (syncs to Files app on iPhone).
+Audio files (.m4a) appear in `~/Library/Mobile Documents/com~apple~CloudDocs/Thyme/` (syncs to Files app on iPhone).
 
 ## Auto-Run on Reading List Changes
 
 ```bash
-# Edit the plist to replace USERNAME with your username
-sed -i '' "s/USERNAME/$(whoami)/g" com.needmore.thyme.plist
+# Edit the plist: replace USERNAME and path/to with your values
+sed -i '' "s|USERNAME|$(whoami)|g; s|path/to|$(pwd)|" com.needmore.thyme.plist
 
 # Install
 cp com.needmore.thyme.plist ~/Library/LaunchAgents/
