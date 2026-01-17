@@ -8,13 +8,13 @@ Thyme converts Safari Reading List articles to audio files (.m4a) using macOS te
 1. Reads Safari's Bookmarks.plist to get Reading List items
 2. Extracts article text with trafilatura
 3. Converts to m4a/AAC using the macOS `say` command
-4. Saves to iCloud Drive for sync to iOS devices
+4. Saves to `~/Library/Mobile Documents/com~apple~CloudDocs/Reading List/` for sync to iOS devices
 
 ## Commands
 
 ```bash
 # Install dependencies
-pip install trafilatura lxml_html_clean
+pip install trafilatura lxml_html_clean tqdm
 
 # Run the script
 python thyme.py

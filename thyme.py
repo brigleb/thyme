@@ -14,12 +14,13 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import trafilatura
+from tqdm import tqdm
 
 # Configuration
-OUTPUT_DIR = Path("~/Library/Mobile Documents/com~apple~CloudDocs/Thyme/").expanduser()
+OUTPUT_DIR = Path("~/Library/Mobile Documents/com~apple~CloudDocs/Reading List/").expanduser()
 BOOKMARKS_PATH = Path("~/Library/Safari/Bookmarks.plist").expanduser()
 STATE_FILE = OUTPUT_DIR / "processed.json"
-MAX_EPISODES = 40
+MAX_EPISODES = 50
 MIN_TEXT_LENGTH = 500  # Skip articles shorter than this
 VOICE = "Samantha"
 RATE = 190
@@ -151,46 +152,46 @@ def main():
     print(f"Found {len(items)} items in Reading List")
     
     # Process each unprocessed item
-    for item in items:
+    for item in tqdm(items, desc="Processing articles", unit="article"):
         url = item["url"]
         title = item["title"]
-        
+
         if url in processed_urls:
-            print(f"Skipping (already processed): {title[:50]}")
+            tqdm.write(f"  Skipping (already processed): {title[:50]}")
             continue
-        
-        print(f"Processing: {title[:50]}...")
-        
+
+        tqdm.write(f"  Processing: {title[:50]}...")
+
         # Extract article text
         text = extract_article_text(url)
         if not text:
-            print(f"  Failed to extract text, skipping")
+            tqdm.write(f"    Failed to extract text, skipping")
             processed_urls.add(url)  # Mark as processed to avoid retrying
             continue
 
         if len(text) < MIN_TEXT_LENGTH:
-            print(f"  Too short ({len(text)} chars), skipping")
+            tqdm.write(f"    Too short ({len(text)} chars), skipping")
             processed_urls.add(url)
             continue
-        
+
         # Prepare text with spoken intro
         domain = get_domain(url)
         full_text = f"From {domain}: {title}.\n\n{text}"
-        
+
         # Generate filename with timestamp
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         safe_title = sanitize_filename(title)
         filename = f"{timestamp}-{safe_title}.m4a"
         output_path = OUTPUT_DIR / filename
-        
+
         # Convert to audio
-        print(f"  Generating audio...")
+        tqdm.write(f"    Generating audio...")
         try:
             text_to_mp3(full_text, output_path)
-            print(f"  Saved: {filename}")
+            tqdm.write(f"    Saved: {filename}")
             processed_urls.add(url)
         except subprocess.CalledProcessError as e:
-            print(f"  Error generating audio: {e}")
+            tqdm.write(f"    Error generating audio: {e}")
             continue
     
     # Save state
