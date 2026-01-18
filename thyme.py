@@ -9,6 +9,7 @@ import plistlib
 import re
 import subprocess
 import tempfile
+import wave
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import urlparse
@@ -22,8 +23,31 @@ BOOKMARKS_PATH = Path("~/Library/Safari/Bookmarks.plist").expanduser()
 STATE_FILE = OUTPUT_DIR / "processed.json"
 MAX_EPISODES = 50
 MIN_TEXT_LENGTH = 500  # Skip articles shorter than this
+
+# TTS Configuration
+USE_PIPER = True  # Set to False to fall back to macOS 'say'
+PIPER_MODEL = "~/piper-models/en_US-lessac-high.onnx"  # Path to Piper voice model
+# Download voice models from: https://rhasspy.github.io/piper-samples/
+# Using: en_US-lessac-high for highest quality
+
+# Fallback macOS 'say' configuration (used when USE_PIPER=False or if Piper fails to load)
 VOICE = "Samantha"
 RATE = 190
+
+# Initialize Piper voice
+piper_voice = None
+if USE_PIPER and PIPER_MODEL:
+    try:
+        from piper.voice import PiperVoice
+        model_path = Path(PIPER_MODEL).expanduser()
+        piper_voice = PiperVoice.load(str(model_path))
+        print(f"Loaded Piper TTS model: {model_path}")
+    except ImportError:
+        print("Warning: piper-tts not installed. Install with: pip install piper-tts")
+        print("Falling back to macOS 'say' command")
+    except Exception as e:
+        print(f"Warning: Could not load Piper model: {e}")
+        print("Falling back to macOS 'say' command")
 
 
 def load_processed_urls():
@@ -110,24 +134,52 @@ def get_domain(url):
 
 
 def text_to_mp3(text, output_path):
-    """Convert text to MP3 using macOS say command."""
-    # Write text to temp file to avoid shell escaping issues
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
-        f.write(text)
-        temp_path = f.name
-    
-    try:
+    """Convert text to audio using Piper TTS or macOS say command."""
+    if piper_voice is not None:
+        # Use Piper TTS
+        # Save as WAV first
+        temp_wav = str(output_path).replace('.m4a', '.wav')
+
+        # Collect audio chunks
+        audio_data = b''
+        for audio_chunk in piper_voice.synthesize(text):
+            audio_data += audio_chunk.audio_int16_bytes
+
+        # Write to WAV file
+        with wave.open(temp_wav, "w") as wav_file:
+            wav_file.setnchannels(1)  # Mono
+            wav_file.setsampwidth(2)  # 16-bit
+            wav_file.setframerate(piper_voice.config.sample_rate)
+            wav_file.writeframes(audio_data)
+
+        # Convert WAV to M4A using ffmpeg
         subprocess.run([
-            "say",
-            "-v", VOICE,
-            "-r", str(RATE),
-            "-f", temp_path,
-            "--file-format=m4af",
-            "--data-format=aac",
-            "-o", str(output_path),
-        ], check=True)
-    finally:
-        os.unlink(temp_path)
+            "ffmpeg", "-y", "-i", temp_wav,
+            "-c:a", "aac", "-b:a", "64k",
+            str(output_path)
+        ], check=True, capture_output=True)
+
+        # Clean up temp WAV
+        os.unlink(temp_wav)
+    else:
+        # Fall back to macOS say command
+        # Write text to temp file to avoid shell escaping issues
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+            f.write(text)
+            temp_path = f.name
+
+        try:
+            subprocess.run([
+                "say",
+                "-v", VOICE,
+                "-r", str(RATE),
+                "-f", temp_path,
+                "--file-format=m4af",
+                "--data-format=aac",
+                "-o", str(output_path),
+            ], check=True)
+        finally:
+            os.unlink(temp_path)
 
 
 def cleanup_old_episodes():
@@ -178,10 +230,9 @@ def main():
         domain = get_domain(url)
         full_text = f"From {domain}: {title}.\n\n{text}"
 
-        # Generate filename with timestamp
-        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        # Generate filename from title
         safe_title = sanitize_filename(title)
-        filename = f"{timestamp}-{safe_title}.m4a"
+        filename = f"{safe_title}.m4a"
         output_path = OUTPUT_DIR / filename
 
         # Convert to audio
