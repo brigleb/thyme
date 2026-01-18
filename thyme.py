@@ -24,7 +24,7 @@ from lxml import html as lxml_html
 OUTPUT_DIR = Path("~/Library/Mobile Documents/com~apple~CloudDocs/Reading List/").expanduser()
 BOOKMARKS_PATH = Path("~/Library/Safari/Bookmarks.plist").expanduser()
 STATE_FILE = OUTPUT_DIR / "processed.json"
-MAX_EPISODES = 50
+MAX_EPISODES = 60
 MIN_TEXT_LENGTH = 500  # Skip articles shorter than this
 
 # TTS Configuration
