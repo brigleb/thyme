@@ -102,9 +102,13 @@ def get_reading_list_items():
                 "date_added": date_added,
             })
     
-    # Sort by date added (oldest first) and take top MAX_EPISODES
-    reading_list.sort(key=lambda x: x.get("date_added") or datetime.min, reverse=False)
-    return reading_list[:MAX_EPISODES]
+    # Sort by date added (newest first) and take top MAX_EPISODES
+    reading_list.sort(key=lambda x: x.get("date_added") or datetime.min, reverse=True)
+    latest_items = reading_list[:MAX_EPISODES]
+
+    # Reverse to process oldest-to-newest within the latest items
+    latest_items.reverse()
+    return latest_items
 
 
 def extract_article_text(url):
