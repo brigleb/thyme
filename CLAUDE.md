@@ -5,10 +5,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 Thyme converts Safari Reading List articles to audio files (.m4a) using text-to-speech. It's a single-file Python script that:
-1. Reads Safari's Bookmarks.plist to get Reading List items
+1. Reads Safari's Bookmarks.plist to get Reading List items (processes oldest first)
 2. Extracts article text with trafilatura
 3. Converts to m4a/AAC using Piper TTS (open-source) or macOS `say` command (fallback)
-4. Saves to `~/Library/Mobile Documents/com~apple~CloudDocs/Reading List/` for sync to iOS devices
+4. Sets custom file icons using article feature images or favicons
+5. Saves to `~/Library/Mobile Documents/com~apple~CloudDocs/Reading List/` for sync to iOS devices
 
 ## Commands
 
@@ -16,8 +17,8 @@ Thyme converts Safari Reading List articles to audio files (.m4a) using text-to-
 # Install Python dependencies
 pip install trafilatura lxml_html_clean tqdm piper-tts
 
-# Install system dependencies (for Piper TTS)
-brew install ffmpeg
+# Install system dependencies
+brew install ffmpeg fileicon
 
 # Download a Piper voice model (see "Piper Voice Models" section below)
 # Place the .onnx and .onnx.json files in a directory of your choice

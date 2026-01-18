@@ -12,10 +12,13 @@ import tempfile
 import wave
 from datetime import datetime
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
+from urllib.request import urlopen, Request
+from urllib.error import URLError, HTTPError
 
 import trafilatura
 from tqdm import tqdm
+from lxml import html as lxml_html
 
 # Configuration
 OUTPUT_DIR = Path("~/Library/Mobile Documents/com~apple~CloudDocs/Reading List/").expanduser()
@@ -99,8 +102,8 @@ def get_reading_list_items():
                 "date_added": date_added,
             })
     
-    # Sort by date added (newest first) and take top 20
-    reading_list.sort(key=lambda x: x.get("date_added") or datetime.min, reverse=True)
+    # Sort by date added (oldest first) and take top MAX_EPISODES
+    reading_list.sort(key=lambda x: x.get("date_added") or datetime.min, reverse=False)
     return reading_list[:MAX_EPISODES]
 
 
@@ -109,9 +112,81 @@ def extract_article_text(url):
     downloaded = trafilatura.fetch_url(url)
     if not downloaded:
         return None
-    
+
     text = trafilatura.extract(downloaded, include_comments=False, include_tables=False)
     return text
+
+
+def get_article_image_url(url):
+    """
+    Extract feature image URL from article.
+    Tries Open Graph image, Twitter Card image, then falls back to favicon.
+    """
+    try:
+        # Fetch the HTML
+        req = Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urlopen(req, timeout=10) as response:
+            html_content = response.read()
+
+        # Parse HTML
+        tree = lxml_html.fromstring(html_content)
+
+        # Try Open Graph image (og:image)
+        og_image = tree.xpath('//meta[@property="og:image"]/@content')
+        if og_image:
+            image_url = og_image[0]
+            # Make absolute URL if relative
+            return urljoin(url, image_url)
+
+        # Try Twitter Card image
+        twitter_image = tree.xpath('//meta[@name="twitter:image"]/@content')
+        if twitter_image:
+            image_url = twitter_image[0]
+            return urljoin(url, image_url)
+
+        # Fallback to favicon
+        favicon = tree.xpath('//link[@rel="icon"]/@href | //link[@rel="shortcut icon"]/@href')
+        if favicon:
+            return urljoin(url, favicon[0])
+
+        # Last resort: /favicon.ico
+        parsed = urlparse(url)
+        return f"{parsed.scheme}://{parsed.netloc}/favicon.ico"
+
+    except Exception as e:
+        # If all else fails, return a default favicon path
+        try:
+            parsed = urlparse(url)
+            return f"{parsed.scheme}://{parsed.netloc}/favicon.ico"
+        except:
+            return None
+
+
+def download_image(image_url, output_path):
+    """Download image from URL to local path."""
+    try:
+        req = Request(image_url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urlopen(req, timeout=10) as response:
+            image_data = response.read()
+
+        with open(output_path, 'wb') as f:
+            f.write(image_data)
+        return True
+    except (URLError, HTTPError, Exception):
+        return False
+
+
+def set_file_icon(file_path, image_path):
+    """Set custom icon for a file using the fileicon utility."""
+    try:
+        subprocess.run(
+            ['fileicon', 'set', file_path, image_path],
+            check=True,
+            capture_output=True
+        )
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False
 
 
 def sanitize_filename(title):
@@ -240,6 +315,23 @@ def main():
         try:
             text_to_mp3(full_text, output_path)
             tqdm.write(f"    Saved: {filename}")
+
+            # Set custom icon from article image or favicon
+            tqdm.write(f"    Setting icon...")
+            image_url = get_article_image_url(url)
+            if image_url:
+                # Download image to temp file
+                temp_image = OUTPUT_DIR / f".temp_icon_{safe_title}.png"
+                if download_image(image_url, temp_image):
+                    # Set the icon
+                    if set_file_icon(str(output_path), str(temp_image)):
+                        tqdm.write(f"    Icon set from: {image_url}")
+                    # Clean up temp image
+                    try:
+                        temp_image.unlink()
+                    except:
+                        pass
+
             processed_urls.add(url)
         except subprocess.CalledProcessError as e:
             tqdm.write(f"    Error generating audio: {e}")
